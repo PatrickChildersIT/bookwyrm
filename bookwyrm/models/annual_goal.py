@@ -53,7 +53,7 @@ class AnnualGoal(BookWyrmModel):
             user=self.user,
             book__in=book_ids,
         )
-        return {r.book_id: r.rating for r in reviews}
+        return {review.book_id: review.rating for review in reviews}
 
     @property
     def progress(self):
