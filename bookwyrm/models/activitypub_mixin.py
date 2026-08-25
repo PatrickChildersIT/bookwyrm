@@ -7,7 +7,7 @@ from functools import reduce
 import json
 import operator
 import logging
-from typing import Any, Optional
+from typing import Any, Awaitable, Optional
 from uuid import uuid4
 from typing_extensions import Self
 
@@ -128,7 +128,7 @@ class ActivitypubMixin:
         # there OUGHT to be only one match
         return match.first()
 
-    def broadcast(self, activity, sender, software: str = None, queue = BROADCAST):
+    def broadcast(self, activity, sender, software: str = None, queue = BROADCAST) -> None:
         """send out an activity"""
         site_model = apps.get_model("bookwyrm.SiteSettings", require_ready=True)
         try:
@@ -383,7 +383,7 @@ class OrderedCollectionMixin(OrderedCollectionPageMixin):
             self.collection_queryset, **kwargs
         ).serialize()
 
-    def delete(self, *args, broadcast=True, **kwargs):
+    def delete(self, *args, broadcast=True, **kwargs) -> None:
         """Delete the object"""
         activity = self.to_delete_activity(self.user)
         super().delete(*args, **kwargs)
@@ -396,18 +396,18 @@ class CollectionItemMixin(ActivitypubMixin):
 
     activity_serializer = activitypub.CollectionItem
 
-    def broadcast(self, activity, sender, software="bookwyrm", queue=BROADCAST):
+    def broadcast(self, activity, sender, software="bookwyrm", queue=BROADCAST) -> None:
         """only send book collection updates to other bookwyrm instances"""
         super().broadcast(activity, sender, software=software, queue=queue)
 
     @property
-    def privacy(self):
+    def privacy(self) -> str:
         """inherit the privacy of the list"""
         collection_field = getattr(self, self.collection_field)
         return collection_field.privacy
 
     @property
-    def recipients(self):
+    def recipients(self) -> list:
         """the owner of the list is a direct recipient"""
         collection_field = getattr(self, self.collection_field)
         if collection_field.user.local:
@@ -415,7 +415,7 @@ class CollectionItemMixin(ActivitypubMixin):
             return []
         return [collection_field.user]
 
-    def save(self, *args, broadcast: bool=True, priority=BROADCAST, **kwargs):
+    def save(self, *args, broadcast: bool=True, priority=BROADCAST, **kwargs) -> None:
         """broadcast updated"""
         # first off, we want to save normally no matter what
         super().save(*args, **kwargs)
@@ -428,7 +428,7 @@ class CollectionItemMixin(ActivitypubMixin):
         activity = self.to_add_activity(self.user)
         self.broadcast(activity, self.user, queue=priority)
 
-    def delete(self, *args, broadcast: bool=True, **kwargs):
+    def delete(self, *args, broadcast: bool=True, **kwargs) -> None:
         """broadcast a remove activity"""
         activity = self.to_remove_activity(self.user)
         super().delete(*args, **kwargs)
@@ -459,14 +459,14 @@ class CollectionItemMixin(ActivitypubMixin):
 class ActivityMixin(ActivitypubMixin):
     """add this mixin for models that are AP serializable"""
 
-    def save(self, *args, broadcast: bool=True, priority: str=BROADCAST, **kwargs):
+    def save(self, *args, broadcast: bool=True, priority: str=BROADCAST, **kwargs) -> None:
         """broadcast activity"""
         super().save(*args, **kwargs)
         user = self.user if hasattr(self, "user") else self.user_subject
         if broadcast and user.local:
             self.broadcast(self.to_activity(), user, queue=priority)
 
-    def delete(self, *args, broadcast: bool=True, **kwargs):
+    def delete(self, *args, broadcast: bool=True, **kwargs) -> None:
         """nevermind, undo that activity"""
         user = self.user if hasattr(self, "user") else self.user_subject
         if broadcast and user.local:
@@ -483,8 +483,8 @@ class ActivityMixin(ActivitypubMixin):
         ).serialize()
 
 
-def generate_activity(obj: ActivitypubMixin):
-    """go through the fields on an object"""
+def generate_activity(obj: ActivitypubMixin) -> dict[str, Any]:
+    """go through the fields on an object""" # and do what?
     activity = {}
     for field in obj.activity_fields:
         field.set_activity_from_field(activity, obj)
@@ -522,7 +522,7 @@ def unfurl_related_field(related_field, sort_field=None):
 
 
 @app.task(queue=BROADCAST)
-def broadcast_task(sender_id: int, activity: str, recipients: list[str]):
+def broadcast_task(sender_id: int, activity: str, recipients: list[str]) -> None:
     """the celery task for broadcast"""
     # checking this here ought to be redundant unless there are already-spawned tasks
     # when federation is turned off. In that case this should prevent them from running.
@@ -534,7 +534,7 @@ def broadcast_task(sender_id: int, activity: str, recipients: list[str]):
     asyncio.run(async_broadcast(recipients, sender, activity))
 
 
-async def async_broadcast(recipients: list[str], sender, data: str):
+async def async_broadcast(recipients: list[str], sender, data: str) -> Awaitable[aiohttp.ClientResponse]:
     """Send all the broadcasts simultaneously"""
     timeout = aiohttp.ClientTimeout(total=10)
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -550,7 +550,7 @@ async def async_broadcast(recipients: list[str], sender, data: str):
 
 async def sign_and_send(
     session: aiohttp.ClientSession, sender, data: str, destination: str, **kwargs
-):
+) -> Awaitable[aiohttp.ClientResponse]:
     """Sign the messages and send them in an asynchronous bundle"""
     now = http_date()
 
