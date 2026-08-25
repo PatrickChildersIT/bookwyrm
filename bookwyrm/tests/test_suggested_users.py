@@ -137,7 +137,7 @@ class SuggestedUsers(TestCase):
         with patch(
             "bookwyrm.suggested_users.SuggestedUsers.populate_store"
         ) as store_mock:
-            suggested_users.rerank_user_suggestions(self.local_user)
+            suggested_users.rerank_user_suggestions(self.local_user.id)
         args = store_mock.call_args[0]
         self.assertEqual(args[0], f"{self.local_user.id}-suggestions")
 
