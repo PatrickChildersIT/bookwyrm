@@ -62,7 +62,7 @@ class ActivitypubMixin:
             else:
                 self.simple_fields.append(field)
 
-        # a list of allll the serializable fields
+        # a list of all the serializable fields
         self.activity_fields = (
             self.image_fields + self.many_to_many_fields + self.simple_fields
         )
@@ -92,7 +92,7 @@ class ActivitypubMixin:
         return cls.find_existing({"id": remote_id})
 
     @classmethod
-    def find_existing(cls, data):
+    def find_existing(cls, data: dict):
         """compare data to fields that can be used for deduplication.
         This always includes remote_id, but can also be unique identifiers
         like an isbn for an edition"""
@@ -128,7 +128,7 @@ class ActivitypubMixin:
         # there OUGHT to be only one match
         return match.first()
 
-    def broadcast(self, activity, sender, software=None, queue=BROADCAST):
+    def broadcast(self, activity, sender, software: str = None, queue = BROADCAST):
         """send out an activity"""
         site_model = apps.get_model("bookwyrm.SiteSettings", require_ready=True)
         try:
@@ -149,7 +149,7 @@ class ActivitypubMixin:
             queue=queue,
         )
 
-    def get_recipients(self, software=None) -> list[str]:
+    def get_recipients(self, software: str = None) -> list[str]:
         """figure out which inbox urls to post to"""
         # first we have to figure out who should receive this activity
         privacy = self.privacy if hasattr(self, "privacy") else "public"
@@ -215,7 +215,7 @@ class ObjectMixin(ActivitypubMixin):
         self,
         *args: Any,
         created: Optional[bool] = None,
-        software: Any = None,
+        software: str = None,
         priority: str = BROADCAST,
         broadcast: bool = True,
         **kwargs: Any,
@@ -332,7 +332,7 @@ class OrderedCollectionPageMixin(ObjectMixin):
         return self.remote_id
 
     def to_ordered_collection(
-        self, queryset, remote_id=None, page=False, collection_only=False, **kwargs
+        self, queryset, remote_id: str=None, page=False, collection_only=False, **kwargs
     ):
         """an ordered collection of whatevers"""
         if not queryset.ordered:
@@ -415,7 +415,7 @@ class CollectionItemMixin(ActivitypubMixin):
             return []
         return [collection_field.user]
 
-    def save(self, *args, broadcast=True, priority=BROADCAST, **kwargs):
+    def save(self, *args, broadcast: bool=True, priority=BROADCAST, **kwargs):
         """broadcast updated"""
         # first off, we want to save normally no matter what
         super().save(*args, **kwargs)
@@ -428,7 +428,7 @@ class CollectionItemMixin(ActivitypubMixin):
         activity = self.to_add_activity(self.user)
         self.broadcast(activity, self.user, queue=priority)
 
-    def delete(self, *args, broadcast=True, **kwargs):
+    def delete(self, *args, broadcast: bool=True, **kwargs):
         """broadcast a remove activity"""
         activity = self.to_remove_activity(self.user)
         super().delete(*args, **kwargs)
@@ -459,14 +459,14 @@ class CollectionItemMixin(ActivitypubMixin):
 class ActivityMixin(ActivitypubMixin):
     """add this mixin for models that are AP serializable"""
 
-    def save(self, *args, broadcast=True, priority=BROADCAST, **kwargs):
+    def save(self, *args, broadcast: bool=True, priority: str=BROADCAST, **kwargs):
         """broadcast activity"""
         super().save(*args, **kwargs)
         user = self.user if hasattr(self, "user") else self.user_subject
         if broadcast and user.local:
             self.broadcast(self.to_activity(), user, queue=priority)
 
-    def delete(self, *args, broadcast=True, **kwargs):
+    def delete(self, *args, broadcast: bool=True, **kwargs):
         """nevermind, undo that activity"""
         user = self.user if hasattr(self, "user") else self.user_subject
         if broadcast and user.local:
@@ -483,7 +483,7 @@ class ActivityMixin(ActivitypubMixin):
         ).serialize()
 
 
-def generate_activity(obj):
+def generate_activity(obj: ActivitypubMixin):
     """go through the fields on an object"""
     activity = {}
     for field in obj.activity_fields:
@@ -598,7 +598,7 @@ async def sign_and_send(
 
 
 def to_ordered_collection_page(
-    queryset, remote_id, id_only=False, page=1, pure=False, **kwargs
+    queryset, remote_id: str, id_only: bool=False, page: int=1, pure: bool=False, **kwargs
 ):
     """serialize and paginate a queryset"""
     paginated = Paginator(queryset, PAGE_LENGTH)
