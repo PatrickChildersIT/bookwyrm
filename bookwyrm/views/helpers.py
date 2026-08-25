@@ -149,7 +149,7 @@ def subscribe_remote_webfinger(query: str):
     return template
 
 
-def get_edition(book_id: str) -> models.Edition:
+def get_edition(book_id: int) -> models.Edition:
     """look up a book in the db and return an edition"""
     book = models.Book.objects.select_subclasses().get(id=book_id)
     if isinstance(book, models.Work):

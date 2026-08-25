@@ -20,16 +20,16 @@ tracer = open_telemetry.tracer()
 class ActivityStream(RedisStore):
     """a category of activity stream (like home, local, books)"""
 
-    def stream_id(self, user_id: str):
+    def stream_id(self, user_id: int) -> str:
         """the redis key for this user's instance of this stream"""
         return f"{user_id}-{self.key}"
 
-    def unread_id(self, user_id: str):
+    def unread_id(self, user_id: int) -> str:
         """the redis key for this user's unread count for this stream"""
         stream_id = self.stream_id(user_id)
         return f"{stream_id}-unread"
 
-    def unread_by_status_type_id(self, user_id: str):
+    def unread_by_status_type_id(self, user_id: int) -> str:
         """the redis key for this user's unread count for this stream"""
         stream_id = self.stream_id(user_id)
         return f"{stream_id}-unread-by-type"

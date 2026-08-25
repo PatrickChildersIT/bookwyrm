@@ -293,7 +293,7 @@ def parse_series_number(series: list[JsonDict]) -> str | None:
     return None
 
 
-def retrieve_versions(book_id: str | None) -> list[JsonDict]:
+def retrieve_versions(book_id: int | None) -> list[JsonDict]:
     """
     https://api.finna.fi/v1/search?id=anders.1946700&search=versions&view=&
 
