@@ -18,7 +18,7 @@ from Crypto.Hash import SHA256
 from django.apps import apps
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.utils.http import http_date
 
 from bookwyrm import activitypub
@@ -332,8 +332,8 @@ class OrderedCollectionPageMixin(ObjectMixin):
         return self.remote_id
 
     def to_ordered_collection(
-        self, queryset, remote_id: str=None, page=False, collection_only=False, **kwargs
-    ):
+        self, queryset: QuerySet, remote_id: str=None, page=False, collection_only=False, **kwargs
+    ) -> activitypub.base_activity.ActivityObject:
         """an ordered collection of whatevers"""
         if not queryset.ordered:
             raise RuntimeError("queryset must be ordered")
@@ -599,7 +599,7 @@ async def sign_and_send(
 
 def to_ordered_collection_page(
     queryset, remote_id: str, id_only: bool=False, page: int=1, pure: bool=False, **kwargs
-):
+) -> activitypub.OrderedCollectionPage:
     """serialize and paginate a queryset"""
     paginated = Paginator(queryset, PAGE_LENGTH)
 
