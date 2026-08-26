@@ -19,13 +19,15 @@ def get_notification_count(request: HttpRequest):
 
 
 @login_required
-def get_unread_status_string(request: HttpRequest, stream: str="home"):
+def get_unread_status_string(request: HttpRequest, stream: str = "home"):
     """any unread statuses for this feed?"""
     activity_stream = activitystreams.streams.get(stream)
     if not activity_stream:
         raise Http404
 
-    counts_by_type = activity_stream.get_unread_count_by_status_type(request.user).items()
+    counts_by_type = activity_stream.get_unread_count_by_status_type(
+        request.user
+    ).items()
     if counts_by_type == {}:
         count = activity_stream.get_unread_count(request.user)
     else:

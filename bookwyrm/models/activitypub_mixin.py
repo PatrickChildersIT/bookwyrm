@@ -128,7 +128,9 @@ class ActivitypubMixin:
         # there OUGHT to be only one match
         return match.first()
 
-    def broadcast(self, activity, sender, software: str = None, queue = BROADCAST) -> None:
+    def broadcast(
+        self, activity, sender, software: str = None, queue=BROADCAST
+    ) -> None:
         """send out an activity"""
         site_model = apps.get_model("bookwyrm.SiteSettings", require_ready=True)
         try:
@@ -332,7 +334,12 @@ class OrderedCollectionPageMixin(ObjectMixin):
         return self.remote_id
 
     def to_ordered_collection(
-        self, queryset: QuerySet, remote_id: str=None, page=False, collection_only=False, **kwargs
+        self,
+        queryset: QuerySet,
+        remote_id: str = None,
+        page=False,
+        collection_only=False,
+        **kwargs,
     ) -> activitypub.base_activity.ActivityObject:
         """an ordered collection of whatevers"""
         if not queryset.ordered:
@@ -415,7 +422,7 @@ class CollectionItemMixin(ActivitypubMixin):
             return []
         return [collection_field.user]
 
-    def save(self, *args, broadcast: bool=True, priority=BROADCAST, **kwargs) -> None:
+    def save(self, *args, broadcast: bool = True, priority=BROADCAST, **kwargs) -> None:
         """broadcast updated"""
         # first off, we want to save normally no matter what
         super().save(*args, **kwargs)
@@ -428,7 +435,7 @@ class CollectionItemMixin(ActivitypubMixin):
         activity = self.to_add_activity(self.user)
         self.broadcast(activity, self.user, queue=priority)
 
-    def delete(self, *args, broadcast: bool=True, **kwargs) -> None:
+    def delete(self, *args, broadcast: bool = True, **kwargs) -> None:
         """broadcast a remove activity"""
         activity = self.to_remove_activity(self.user)
         super().delete(*args, **kwargs)
@@ -459,14 +466,16 @@ class CollectionItemMixin(ActivitypubMixin):
 class ActivityMixin(ActivitypubMixin):
     """add this mixin for models that are AP serializable"""
 
-    def save(self, *args, broadcast: bool=True, priority: str=BROADCAST, **kwargs) -> None:
+    def save(
+        self, *args, broadcast: bool = True, priority: str = BROADCAST, **kwargs
+    ) -> None:
         """broadcast activity"""
         super().save(*args, **kwargs)
         user = self.user if hasattr(self, "user") else self.user_subject
         if broadcast and user.local:
             self.broadcast(self.to_activity(), user, queue=priority)
 
-    def delete(self, *args, broadcast: bool=True, **kwargs) -> None:
+    def delete(self, *args, broadcast: bool = True, **kwargs) -> None:
         """nevermind, undo that activity"""
         user = self.user if hasattr(self, "user") else self.user_subject
         if broadcast and user.local:
@@ -484,7 +493,7 @@ class ActivityMixin(ActivitypubMixin):
 
 
 def generate_activity(obj: ActivitypubMixin) -> dict[str, Any]:
-    """go through the fields on an object""" # and do what?
+    """go through the fields on an object"""  # and do what?
     activity = {}
     for field in obj.activity_fields:
         field.set_activity_from_field(activity, obj)
@@ -534,7 +543,9 @@ def broadcast_task(sender_id: int, activity: str, recipients: list[str]) -> None
     asyncio.run(async_broadcast(recipients, sender, activity))
 
 
-async def async_broadcast(recipients: list[str], sender, data: str) -> Awaitable[aiohttp.ClientResponse]:
+async def async_broadcast(
+    recipients: list[str], sender, data: str
+) -> Awaitable[aiohttp.ClientResponse]:
     """Send all the broadcasts simultaneously"""
     timeout = aiohttp.ClientTimeout(total=10)
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -598,7 +609,12 @@ async def sign_and_send(
 
 
 def to_ordered_collection_page(
-    queryset, remote_id: str, id_only: bool=False, page: int=1, pure: bool=False, **kwargs
+    queryset,
+    remote_id: str,
+    id_only: bool = False,
+    page: int = 1,
+    pure: bool = False,
+    **kwargs,
 ) -> activitypub.OrderedCollectionPage:
     """serialize and paginate a queryset"""
     paginated = Paginator(queryset, PAGE_LENGTH)

@@ -71,7 +71,9 @@ def is_bookwyrm_request(request: HttpRequest) -> bool:
     return True
 
 
-def handle_remote_webfinger(query: str, unknown_only: bool=False, refresh: bool=False) -> models.User | None:
+def handle_remote_webfinger(
+    query: str, unknown_only: bool = False, refresh: bool = False
+) -> models.User | None:
     """webfingerin' other servers"""
     # SHOULD we do a remote webfinger? Is it allowed?
     models.SiteSettings.raise_federation_disabled()

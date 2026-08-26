@@ -9,7 +9,8 @@ def remove_editions():
     """combine duplicate editions and update related models"""
     # not in use
     filters = {
-        "%s__isnull" % related_object.name: True for related_object in models.Edition._meta.related_objects
+        "%s__isnull" % related_object.name: True
+        for related_object in models.Edition._meta.related_objects
     }
     # no cover, no identifying fields
     filters["cover"] = ""

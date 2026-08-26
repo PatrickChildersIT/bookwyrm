@@ -108,7 +108,9 @@ class ActivityStream(RedisStore):
         self.populate_store(self.stream_id(user.id))
 
     @tracer.start_as_current_span("ActivityStream._get_audience")
-    def _get_audience(self, status: models.Status, exclude_self=False) -> QuerySet[models.User]:
+    def _get_audience(
+        self, status: models.Status, exclude_self=False
+    ) -> QuerySet[models.User]:
         """given a status, what users should see it, excluding the author"""
         trace.get_current_span().set_attribute("status_type", status.status_type)
         trace.get_current_span().set_attribute("status_privacy", status.privacy)
@@ -435,7 +437,9 @@ def add_status_on_create(
     )
 
 
-def add_status_on_create_command(sender: type, instance: BookWyrmModel, created: bool) -> None:
+def add_status_on_create_command(
+    sender: type, instance: BookWyrmModel, created: bool
+) -> None:
     """runs this code only after the database commit completes"""
     # boosts trigger 'saves" twice, so don't bother duplicating the task
     if sender == models.Boost and not created:
@@ -464,7 +468,9 @@ def add_status_on_create_command(sender: type, instance: BookWyrmModel, created:
 
 
 @receiver(signals.post_delete, sender=models.Boost)
-def remove_boost_on_delete(sender: type, instance: models.Boost, *args, **kwargs) -> None:
+def remove_boost_on_delete(
+    sender: type, instance: models.Boost, *args, **kwargs
+) -> None:
     """boosts are deleted"""
     # remove the boost
     remove_status_task.delay(instance.id)
@@ -515,7 +521,9 @@ def remove_statuses_on_block(
 
 
 @receiver(signals.post_delete, sender=models.UserBlocks)
-def add_statuses_on_unblock(sender: type, instance: models.UserBlocks, *args, **kwargs) -> None:
+def add_statuses_on_unblock(
+    sender: type, instance: models.UserBlocks, *args, **kwargs
+) -> None:
     """add statuses back to all feeds on unblock"""
     # make sure there isn't a block in the other direction
     if models.UserBlocks.objects.filter(
@@ -562,7 +570,9 @@ def populate_streams_on_account_create_command(instance_id: int) -> None:
 
 
 @receiver(signals.pre_save, sender=models.ShelfBook)
-def add_statuses_on_shelve(sender: type, instance: models.ShelfBook, *args, **kwargs) -> None:
+def add_statuses_on_shelve(
+    sender: type, instance: models.ShelfBook, *args, **kwargs
+) -> None:
     """update books stream when user shelves a book"""
     if not instance.user.local:
         return
@@ -681,7 +691,9 @@ def remove_user_statuses_task(
 
 
 @app.task(queue=STREAMS)
-def add_user_statuses_task(viewer_id: int, user_id: int, stream_list: list[str] = None) -> None:
+def add_user_statuses_task(
+    viewer_id: int, user_id: int, stream_list: list[str] = None
+) -> None:
     """add all statuses by a user to a viewer's stream"""
     stream_list = [streams[s] for s in stream_list] if stream_list else streams.values()
     viewer = models.User.objects.get(id=viewer_id)

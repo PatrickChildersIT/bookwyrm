@@ -8,7 +8,7 @@ from json import JSONEncoder
 import logging
 import random
 import time
-from typing import Generator, Optional, Union, TypeVar, overload, Any
+from typing import Generator, Optional, TypeVar, overload, Any
 
 import requests
 
@@ -98,7 +98,9 @@ class Signature:
     type: str = "RsaSignature2017"
 
 
-def naive_parse(activity_objects: Any, activity_json: dict, serializer: Any | None =None) -> Any:
+def naive_parse(
+    activity_objects: Any, activity_json: dict, serializer: Any | None = None
+) -> Any:
     """this navigates circular import issues by looking up models' serializers"""
     if not serializer:
         if activity_json.get("publicKeyPem"):
@@ -324,7 +326,11 @@ class ActivityObject:
 @app.task(queue=MISC)
 @transaction.atomic
 def set_related_field(
-    model_name: str, origin_model_name: str, related_field_name: str, related_remote_id: str, data
+    model_name: str,
+    origin_model_name: str,
+    related_field_name: str,
+    related_remote_id: str,
+    data,
 ) -> None:
     """load reverse related fields (editions, attachments) without blocking"""
     model = apps.get_model(f"bookwyrm.{model_name}", require_ready=True)

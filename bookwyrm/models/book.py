@@ -142,11 +142,11 @@ class BookDataModel(ObjectMixin, BookWyrmModel):
 
         super().save(*args, update_fields=update_fields, **kwargs)
 
-    def broadcast(self, activity, sender, software: str="bookwyrm", **kwargs) -> None:
+    def broadcast(self, activity, sender, software: str = "bookwyrm", **kwargs) -> None:
         """only send book data updates to other bookwyrm instances"""
         super().broadcast(activity, sender, software=software, **kwargs)
 
-    def merge_into(self, canonical: Self, dry_run: bool=False) -> dict[str, Any]:
+    def merge_into(self, canonical: Self, dry_run: bool = False) -> dict[str, Any]:
         """merge this entity into another entity"""
         if canonical.id == self.id:
             raise ValueError(f"Cannot merge {self} into itself")
@@ -162,7 +162,8 @@ class BookDataModel(ObjectMixin, BookWyrmModel):
 
         # move related models to canonical
         related_models = [
-            (related_object.remote_field.name, related_object.related_model) for related_object in self._meta.related_objects
+            (related_object.remote_field.name, related_object.related_model)
+            for related_object in self._meta.related_objects
         ]
         for related_field, related_model in related_models:
             # Skip the ManyToMany fields that aren’t auto-created. These
@@ -188,7 +189,7 @@ class BookDataModel(ObjectMixin, BookWyrmModel):
         self.delete()
         return absorbed_fields
 
-    def absorb_data_from(self, other: Self, dry_run: bool=False) -> dict[str, Any]:
+    def absorb_data_from(self, other: Self, dry_run: bool = False) -> dict[str, Any]:
         """fill empty fields with values from another entity"""
         absorbed_fields = {}
         for data_field in self._meta.get_fields():
@@ -375,7 +376,7 @@ class Book(BookDataModel):
         """editions and works both use "book" instead of model_name"""
         return f"{BASE_URL}/book/{self.id}"
 
-    def guess_sort_title(self, user: User=None) -> str:
+    def guess_sort_title(self, user: User = None) -> str:
         """Get a best-guess sort title for the current book"""
 
         if self.languages not in ([], None):
@@ -406,7 +407,7 @@ class Book(BookDataModel):
 
         return re.sub(f"^{' |^'.join(articles)} ", "", str(self.title).lower())
 
-    def get_series(self) -> list['Series']:
+    def get_series(self) -> list["Series"]:
         """an ordered collection of series"""
         series = set()
         for sb in self.seriesbooks.order_by("-created_date").all():
@@ -502,15 +503,21 @@ class Work(OrderedCollectionPageMixin, Book):
             edition.save()
 
     @property
-    def default_edition(self) -> 'Edition':
+    def default_edition(self) -> "Edition":
         """in case the default edition is not set"""
         return self.editions.order_by("-edition_rank").first()
 
-    def author_edition(self, author: 'bookwyrm_models.author.Author') -> 'Edition':
+    def author_edition(self, author: "bookwyrm_models.author.Author") -> "Edition":
         """in case the default edition doesn't have the required author"""
         return self.editions.filter(authors=author).order_by("-edition_rank").first()
 
-    def to_edition_list(self, **kwargs) -> activitypub.Work | activitypub.OrderedCollectionPage | activitypub.OrderedCollection:
+    def to_edition_list(
+        self, **kwargs
+    ) -> (
+        activitypub.Work
+        | activitypub.OrderedCollectionPage
+        | activitypub.OrderedCollection
+    ):
         """an ordered collection of editions"""
         return self.to_ordered_collection(
             self.editions.order_by("-edition_rank").all(),
@@ -693,7 +700,7 @@ class Edition(Book):
         ]
 
     @classmethod
-    def find_existing(cls, data: dict) -> 'Edition':
+    def find_existing(cls, data: dict) -> "Edition":
         """compare data to fields that can be used for deduplication.
         This always includes remote_id, but can also be unique identifiers
         like an isbn for an edition"""
@@ -857,7 +864,7 @@ class Edition(Book):
         self.save(update_fields=["parent_work"], broadcast=False)
 
     @classmethod
-    def viewer_aware_objects(cls, viewer: User) -> QuerySet['Edition']:
+    def viewer_aware_objects(cls, viewer: User) -> QuerySet["Edition"]:
         """filter blocked books and annotate a book query with metadata related to the user"""
         queryset = cls.objects
 
@@ -882,7 +889,7 @@ class Edition(Book):
         )
         return queryset
 
-    def get_series(self) -> list['Series']:
+    def get_series(self) -> list["Series"]:
         """an ordered collection of series"""
 
         series = set(super().get_series())

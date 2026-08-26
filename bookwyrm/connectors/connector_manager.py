@@ -6,7 +6,7 @@ import importlib
 import ipaddress
 import logging
 from asyncio import Future
-from typing import Iterator, Any, Optional, Union, overload, Literal
+from typing import Iterator, Any, Optional, overload, Literal
 from urllib.parse import urlparse
 
 import aiohttp

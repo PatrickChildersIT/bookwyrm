@@ -113,7 +113,7 @@ class BookWyrmModel(models.Model):
 
         raise Http404()
 
-    def raise_not_editable(self, viewer: 'models.User'):
+    def raise_not_editable(self, viewer: "models.User"):
         """does this user have permission to edit this object? liable to be overwritten
         by models that inherit this base model class"""
         if not hasattr(self, "user"):
@@ -125,7 +125,7 @@ class BookWyrmModel(models.Model):
 
         raise PermissionDenied()
 
-    def raise_not_deletable(self, viewer: 'models.User'):
+    def raise_not_deletable(self, viewer: "models.User"):
         """does this user have permission to delete this object? liable to be
         overwritten by models that inherit this base model class"""
         if not hasattr(self, "user"):
@@ -138,7 +138,9 @@ class BookWyrmModel(models.Model):
         raise PermissionDenied()
 
     @classmethod
-    def privacy_filter(cls, viewer: 'models.User', privacy_levels: list[str]=None) -> QuerySet['BookWyrmModel']:
+    def privacy_filter(
+        cls, viewer: "models.User", privacy_levels: list[str] = None
+    ) -> QuerySet["BookWyrmModel"]:
         """filter objects that have "user" and "privacy" fields"""
         queryset = cls.objects
         if hasattr(queryset, "select_subclasses"):
@@ -169,7 +171,9 @@ class BookWyrmModel(models.Model):
         return queryset
 
     @classmethod
-    def followers_filter(cls, queryset: QuerySet['BookWyrmModel'], viewer: 'models.User') -> QuerySet['BookWyrmModel']:
+    def followers_filter(
+        cls, queryset: QuerySet["BookWyrmModel"], viewer: "models.User"
+    ) -> QuerySet["BookWyrmModel"]:
         """Override-able filter for "followers" privacy level"""
         return queryset.exclude(
             ~Q(  # user isn't following and it isn't their own status
@@ -179,7 +183,9 @@ class BookWyrmModel(models.Model):
         )
 
     @classmethod
-    def direct_filter(cls, queryset: QuerySet['BookWyrmModel'], viewer: 'models.User') -> QuerySet['BookWyrmModel']:
+    def direct_filter(
+        cls, queryset: QuerySet["BookWyrmModel"], viewer: "models.User"
+    ) -> QuerySet["BookWyrmModel"]:
         """Override-able filter for "direct" privacy level"""
         return queryset.exclude(~Q(user=viewer), privacy="direct")
 

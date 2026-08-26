@@ -209,7 +209,13 @@ def update_suggestions_on_unfollow(sender, instance, **kwargs):
 
 
 @receiver(signals.post_save, sender=models.User)
-def update_user(sender: type[models.User], instance: models.User, created: bool, update_fields: list[str]=None, **kwargs):
+def update_user(
+    sender: type[models.User],
+    instance: models.User,
+    created: bool,
+    update_fields: list[str] = None,
+    **kwargs,
+):
     """an updated user, neat"""
     # a new user is found, create suggestions for them
     if created and instance.local:
