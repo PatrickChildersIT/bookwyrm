@@ -22,6 +22,7 @@ from django.db.models import Q, QuerySet
 from django.utils.http import http_date
 
 from bookwyrm import activitypub
+from bookwyrm.activitypub.base_activity import ActivityObject
 from bookwyrm.settings import USER_AGENT, PAGE_LENGTH
 from bookwyrm.signatures import make_signature, make_digest
 from bookwyrm.tasks import app, BROADCAST
@@ -200,12 +201,12 @@ class ActivitypubMixin:
             )
         return list(recipients)
 
-    def to_activity_dataclass(self):
+    def to_activity_dataclass(self) -> ActivityObject:
         """convert from a model to an activity"""
         activity = generate_activity(self)
         return self.activity_serializer(**activity)
 
-    def to_activity(self, **kwargs):
+    def to_activity(self, **kwargs) -> dict[str, Any]:
         """convert from a model to a json activity"""
         return self.to_activity_dataclass().serialize()
 
@@ -492,7 +493,7 @@ class ActivityMixin(ActivitypubMixin):
         ).serialize()
 
 
-def generate_activity(obj: ActivitypubMixin) -> dict[str, Any]:
+def generate_activity(obj: ActivitypubMixin) -> dict[str, str]:
     """go through the fields on an object"""  # and do what?
     activity = {}
     for field in obj.activity_fields:
