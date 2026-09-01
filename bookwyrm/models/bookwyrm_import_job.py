@@ -438,9 +438,9 @@ def upsert_status_task(**kwargs) -> None:
     """Find or create book statuses"""
 
     task = UserImportPost.objects.get(id=kwargs["child_id"])
-    job = task.parent_job
-    user = job.user
-    status = task.json
+    job: ParentJob = task.parent_job
+    user: models.User = job.user
+    status: dict[str, Any] = task.json
     status_class = (
         models.Review
         if task.status_type == "review"
@@ -454,7 +454,7 @@ def upsert_status_task(**kwargs) -> None:
 
     try:
         # only add statuses if this is the same user
-        if is_alias(user, status.get("attributedTo", False)):
+        if is_alias(user, status.get("attributedTo")):
             status["attributedTo"] = user.remote_id
             status["to"] = update_followers_address(user, status["to"])
             status["cc"] = update_followers_address(user, status["cc"])
@@ -462,7 +462,7 @@ def upsert_status_task(**kwargs) -> None:
                 "replies"
             ] = {}  # this parses incorrectly but we can't set it without knowing the new id
             status["inReplyToBook"] = task.book.remote_id
-            parsed = activitypub.parse(status)
+            parsed: activitypub.Comment = activitypub.parse(status)
             if not status_already_exists(
                 user, parsed
             ):  # don't duplicate posts on multiple import
@@ -564,7 +564,7 @@ def upsert_lists(
             )
 
 
-def upsert_shelves(user, book, shelves):
+def upsert_shelves(user: models.User, book: models.Book, shelves: list[dict[str, Any]]) -> None:
     """Take shelf JSON objects and create
     DB entries if they don't already exist"""
 
@@ -587,7 +587,7 @@ def upsert_shelves(user, book, shelves):
 ##############
 
 
-def update_user_profile(user, tar, data):
+def update_user_profile(user: models.User, tar: BookwyrmTarFile, data: dict[str, Any]) -> None:
     """update the user's profile from import data"""
     name = data.get("name", None)
     username = data.get("preferredUsername")
@@ -599,35 +599,35 @@ def update_user_profile(user, tar, data):
         tar.write_image_to_file(avatar_filename, user.avatar)
 
 
-def update_user_settings(user, data):
+def update_user_settings(user: models.User, data: dict[str, Any]) -> None:
     """update the user's settings from import data"""
 
     update_fields = ["manually_approves_followers", "hide_follows", "discoverable"]
 
-    ap_fields = [
+    activitypub_fields = [
         ("manuallyApprovesFollowers", "manually_approves_followers"),
         ("hideFollows", "hide_follows"),
         ("discoverable", "discoverable"),
     ]
 
-    for ap_field, bw_field in ap_fields:
-        setattr(user, bw_field, data[ap_field])
+    for activitypub_field, bookwyrm_field in activitypub_fields:
+        setattr(user, bookwyrm_field, data[activitypub_field])
 
-    bw_fields = [
+    bookwyrm_fields = [
         "show_goal",
         "show_suggested_users",
         "default_post_privacy",
         "preferred_timezone",
     ]
 
-    for field in bw_fields:
+    for field in bookwyrm_fields:
         update_fields.append(field)
         setattr(user, field, data["settings"][field])
 
     user.save(update_fields=update_fields)
 
 
-def update_goals(user, data):
+def update_goals(user: models.User, data: list[dict[str, Any]]) -> None:
     """update the user's goals from import data"""
 
     for goal in data:
@@ -644,17 +644,17 @@ def update_goals(user, data):
             models.AnnualGoal.objects.create(**goal)
 
 
-def upsert_saved_lists(user, values):
+def upsert_saved_lists(user: models.User, remote_ids: list[str]) -> None:
     """Take a list of remote ids and add as saved lists"""
 
-    for remote_id in values:
+    for remote_id in remote_ids:
         book_list = activitypub.resolve_remote_id(remote_id, models.List)
         if book_list:
             user.saved_lists.add(book_list)
 
 
 @app.task(queue=IMPORTS, base=UserImportSubTask)
-def import_user_relationship_task(**kwargs):
+def import_user_relationship_task(**kwargs) -> None:
     """import a user follow or block from an import file"""
 
     task = UserImportRelationship.objects.get(id=kwargs["child_id"])
@@ -737,18 +737,18 @@ def import_user_relationship_task(**kwargs):
 ###########
 
 
-def update_followers_address(user, field):
+def update_followers_address(user: models.User, audiences: list[str]) -> list[str]:
     """statuses to or cc followers need to have the followers
     address updated to the new local user"""
 
-    for i, audience in enumerate(field):
+    for i, audience in enumerate(audiences):
         if audience.rsplit("/")[-1] == "followers":
-            field[i] = user.followers_url
+            audiences[i] = user.followers_url
 
-    return field
+    return audiences
 
 
-def is_alias(user, remote_id):
+def is_alias(user: models.User, remote_id: str) -> bool:
     """check that the user is listed as moved_to
     or also_known_as in the remote user's profile"""
 
@@ -769,7 +769,7 @@ def is_alias(user, remote_id):
     return False
 
 
-def status_already_exists(user, status):
+def status_already_exists(user: models.User, status: activitypub.Comment) -> bool:
     """check whether this status has already been published
     by this user. We can't rely on to_model() because it
     only matches on remote_id, which we have to change
