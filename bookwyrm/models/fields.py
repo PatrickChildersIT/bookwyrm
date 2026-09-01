@@ -3,6 +3,7 @@
 from dataclasses import MISSING
 from datetime import datetime
 import re
+from typing import Any, Sequence
 from uuid import uuid4
 from urllib.parse import urljoin
 
@@ -19,6 +20,7 @@ from django.utils.encoding import filepath_to_uri
 import mistune
 
 from bookwyrm import activitypub
+from bookwyrm.activitypub.base_activity import TBookWyrmModel, ActivityObject
 from bookwyrm.connectors import get_image
 from bookwyrm.utils.sanitizer import clean
 from bookwyrm.utils.partial_date import (
@@ -29,7 +31,7 @@ from bookwyrm.utils.partial_date import (
 from bookwyrm.settings import MEDIA_FULL_URL, DATA_UPLOAD_MAX_MEMORY_SIZE
 
 
-def validate_remote_id(value):
+def validate_remote_id(value: str) -> None:
     """make sure the remote_id looks like a url"""
     if not value or not re.match(r"^http.?:\/\/[^\s]+$", value):
         raise ValidationError(
@@ -38,7 +40,7 @@ def validate_remote_id(value):
         )
 
 
-def validate_localname(value):
+def validate_localname(value: str) -> None:
     """make sure localnames look okay"""
     if not re.match(r"^[A-Za-z\-_\.0-9]+$", value):
         raise ValidationError(
@@ -47,7 +49,7 @@ def validate_localname(value):
         )
 
 
-def validate_username(value):
+def validate_username(value: str) -> None:
     """make sure usernames look okay"""
     if not re.match(r"^[A-Za-z\-_\.0-9]+@[A-Za-z\-_\.0-9]+\.[a-z]{2,}$", value):
         raise ValidationError(
@@ -76,8 +78,8 @@ class ActivitypubFieldMixin:
         super().__init__(*args, **kwargs)
 
     def set_field_from_activity(
-        self, instance, data, overwrite=True, allow_external_connections=True
-    ):
+        self, instance: TBookWyrmModel, data: ActivityObject, overwrite: bool=True, allow_external_connections: bool=True
+    ) -> bool:
         """helper function for assigning a value to the field. Returns if changed"""
         try:
             value = getattr(data, self.get_activitypub_field())
@@ -108,7 +110,7 @@ class ActivitypubFieldMixin:
         setattr(instance, self.name, formatted)
         return True
 
-    def set_activity_from_field(self, activity, instance):
+    def set_activity_from_field(self, activity: ActivityObject, instance: TBookWyrmModel) -> None:
         """update the json object"""
         value = getattr(instance, self.name)
         formatted = self.field_to_activity(value)
@@ -130,13 +132,13 @@ class ActivitypubFieldMixin:
             return {self.activitypub_wrapper: value}
         return value
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         """formatter to convert activitypub into a model value"""
         if value and hasattr(self, "activitypub_wrapper"):
             value = value.get(self.activitypub_wrapper)
         return value
 
-    def get_activitypub_field(self):
+    def get_activitypub_field(self) -> str:
         """model_field_name to activitypubFieldName"""
         if self.activitypub_field:
             return self.activitypub_field
@@ -152,7 +154,7 @@ class ActivitypubRelatedFieldMixin(ActivitypubFieldMixin):
         self.load_remote = load_remote
         super().__init__(*args, **kwargs)
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         """trigger: the object that triggered this deserialization.
         For example the Edition for which self is the parent Work"""
         if not value:
@@ -185,7 +187,7 @@ class ActivitypubRelatedFieldMixin(ActivitypubFieldMixin):
 class RemoteIdField(ActivitypubFieldMixin, models.CharField):
     """a url that serves as a unique identifier"""
 
-    def __init__(self, *args, max_length=255, validators=None, **kwargs):
+    def __init__(self, *args, max_length: int=255, validators=None, **kwargs):
         validators = validators or [validate_remote_id]
         super().__init__(*args, max_length=max_length, validators=validators, **kwargs)
         # for this field, the default is true. false everywhere else.
@@ -195,7 +197,7 @@ class RemoteIdField(ActivitypubFieldMixin, models.CharField):
 class UsernameField(ActivitypubFieldMixin, models.CharField):
     """activitypub-aware username field"""
 
-    def __init__(self, activitypub_field="preferredUsername", **kwargs):
+    def __init__(self, activitypub_field: str="preferredUsername", **kwargs):
         self.activitypub_field = activitypub_field
         super(ActivitypubFieldMixin, self).__init__(
             _("username"),
@@ -207,7 +209,7 @@ class UsernameField(ActivitypubFieldMixin, models.CharField):
             },
         )
 
-    def deconstruct(self):
+    def deconstruct(self) -> tuple[str, str, Sequence[Any], dict[str, Any]]:
         """implementation of models.Field deconstruct"""
         name, path, args, kwargs = super().deconstruct()
         del kwargs["verbose_name"]
@@ -217,7 +219,7 @@ class UsernameField(ActivitypubFieldMixin, models.CharField):
         del kwargs["error_messages"]
         return name, path, args, kwargs
 
-    def field_to_activity(self, value):
+    def field_to_activity(self, value: str) -> str:
         return value.split("@")[0]
 
 
@@ -238,7 +240,7 @@ class PrivacyField(ActivitypubFieldMixin, models.CharField):
         super().__init__(*args, max_length=255, choices=PrivacyLevels, default="public")
 
     def set_field_from_activity(
-        self, instance, data, overwrite=True, allow_external_connections=True
+        self, instance: TBookWyrmModel, data: ActivityObject, overwrite: bool=True, allow_external_connections: bool=True
     ):
         if not overwrite:
             return False
@@ -322,7 +324,7 @@ class ManyToManyField(ActivitypubFieldMixin, models.ManyToManyField):
         super().__init__(*args, **kwargs)
 
     def set_field_from_activity(
-        self, instance, data, overwrite=True, allow_external_connections=True
+        self, instance: TBookWyrmModel, data: ActivityObject, overwrite: bool=True, allow_external_connections: bool=True
     ):
         """helper function for assigning a value to the field"""
         if not overwrite and getattr(instance, self.name).exists():
@@ -343,7 +345,7 @@ class ManyToManyField(ActivitypubFieldMixin, models.ManyToManyField):
             return f"{value.instance.remote_id}/{self.name}"
         return [i.remote_id for i in value.all()]
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         if value is None or value is MISSING:
             return None
         if not isinstance(value, list):
@@ -393,7 +395,7 @@ class TagField(ManyToManyField):
             )
         return tags
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         if not isinstance(value, list):
             # GoToSocial DMs and single-user mentions are
             # sent as objects, not as an array of objects
@@ -459,7 +461,7 @@ class ImageField(ActivitypubFieldMixin, models.ImageField):
         super().__init__(*args, **kwargs)
 
     def set_field_from_activity(
-        self, instance, data, save=True, overwrite=True, allow_external_connections=True
+        self, instance: TBookWyrmModel, data: ActivityObject, save: bool=True, overwrite: bool=True, allow_external_connections: bool=True
     ):
         """helper function for assigning a value to the field"""
         value = getattr(data, self.get_activitypub_field())
@@ -489,7 +491,7 @@ class ImageField(ActivitypubFieldMixin, models.ImageField):
         key = self.get_activitypub_field()
         activity[key] = formatted
 
-    def field_to_activity(self, value, alt=None):
+    def field_to_activity(self, value: str, alt=None) -> activitypub.Image:
         url = get_absolute_url(value)
 
         if not url:
@@ -497,7 +499,7 @@ class ImageField(ActivitypubFieldMixin, models.ImageField):
 
         return activitypub.Image(url=url, name=alt)
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         image_slug = value
         # when it's an inline image (User avatar/icon, Book cover), it's a json
         # blob, but when it's an attached image, it's just a url
@@ -554,7 +556,7 @@ class DateTimeField(ActivitypubFieldMixin, models.DateTimeField):
             return None
         return value.isoformat()
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         missing_fields = datetime(1970, 1, 1)  # "2022-10" => "2022-10-01"
         try:
             date_value = dateutil.parser.parse(value, default=missing_fields)
@@ -572,7 +574,7 @@ class PartialDateField(ActivitypubFieldMixin, PartialDateModel):
     def field_to_activity(self, value) -> str:
         return value.partial_isoformat() if value else None
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         if not value:
             return None
 
@@ -602,7 +604,7 @@ class PartialDateField(ActivitypubFieldMixin, PartialDateModel):
 class HtmlField(ActivitypubFieldMixin, models.TextField):
     """a text field for storing html"""
 
-    def field_from_activity(self, value, allow_external_connections=True, trigger=None):
+    def field_from_activity(self, value, allow_external_connections: bool=True, trigger=None):
         if not value or value == MISSING:
             return None
         return clean(value)

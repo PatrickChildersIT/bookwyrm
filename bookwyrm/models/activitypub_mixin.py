@@ -27,6 +27,7 @@ from bookwyrm.settings import USER_AGENT, PAGE_LENGTH
 from bookwyrm.signatures import make_signature, make_digest
 from bookwyrm.tasks import app, BROADCAST
 from bookwyrm.models.fields import ImageField, ManyToManyField
+from .base_model import BookWyrmModel
 
 logger = logging.getLogger(__name__)
 # I tried to separate these classes into multiple files but I kept getting
@@ -515,8 +516,9 @@ def generate_activity(obj: ActivitypubMixin) -> dict[str, str]:
         activity["id"] = obj.get_remote_id()
     return activity
 
-
-def unfurl_related_field(related_field, sort_field=None):
+# related_fields should be typed as Intersection[ActivitypubMixin, BookWyrmModel]
+#   it requires the ActivitypubMixin's reverse_unfurl & field_to_activity, and BookWyrmModel's order_by
+def unfurl_related_field(related_field: ActivitypubMixin | BookWyrmModel, sort_field: str=None):
     """load reverse lookups (like public key owner or Status attachment"""
     if sort_field and hasattr(related_field, "all"):
         return [
