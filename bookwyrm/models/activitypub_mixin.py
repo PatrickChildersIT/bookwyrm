@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 PropertyField = namedtuple("PropertyField", ("set_activity_from_field"))
 
 
-def set_activity_from_property_field(activity, obj, field):
+def set_activity_from_property_field(activity: dict[str, Any], obj: BookWyrmModel, field: tuple[str, ...]) -> None:
     """assign a model property value to the activity json"""
     activity[field[1]] = getattr(obj, field[0])
 
@@ -494,7 +494,7 @@ class ActivityMixin(ActivitypubMixin):
         ).serialize()
 
 
-def generate_activity(obj: ActivitypubMixin) -> dict[str, str]:
+def generate_activity(obj: ActivitypubMixin) -> dict[str, Any]:
     """go through the fields on an object"""  # and do what?
     activity = {}
     for field in obj.activity_fields:

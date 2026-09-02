@@ -110,9 +110,9 @@ class ActivitypubFieldMixin:
         setattr(instance, self.name, formatted)
         return True
 
-    def set_activity_from_field(self, activity: ActivityObject, instance: TBookWyrmModel) -> None:
+    def set_activity_from_field(self, activity: dict[str, Any], instance: TBookWyrmModel) -> None:
         """update the json object"""
-        value = getattr(instance, self.name)
+        value: 'ActivitypubFieldMixin' = getattr(instance, self.name)
         formatted = self.field_to_activity(value)
         if formatted is None:
             return
@@ -126,7 +126,7 @@ class ActivitypubFieldMixin:
         else:
             activity[key] = formatted
 
-    def field_to_activity(self, value):
+    def field_to_activity(self, value: 'ActivitypubFieldMixin'):
         """formatter to convert a model value into activitypub"""
         if hasattr(self, "activitypub_wrapper"):
             return {self.activitypub_wrapper: value}
@@ -241,7 +241,7 @@ class PrivacyField(ActivitypubFieldMixin, models.CharField):
 
     def set_field_from_activity(
         self, instance: TBookWyrmModel, data: ActivityObject, overwrite: bool=True, allow_external_connections: bool=True
-    ):
+    ) -> bool:
         if not overwrite:
             return False
 
@@ -274,7 +274,7 @@ class PrivacyField(ActivitypubFieldMixin, models.CharField):
             setattr(instance, self.name, "followers")
         return original == getattr(instance, self.name)
 
-    def set_activity_from_field(self, activity, instance):
+    def set_activity_from_field(self, activity: dict[str, Any], instance) -> None:
         # explicitly to anyone mentioned (statuses only)
         mentions = []
         if hasattr(instance, "mention_users"):
